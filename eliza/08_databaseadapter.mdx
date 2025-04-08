@@ -1,0 +1,233 @@
+# Chapter 8: DatabaseAdapter
+
+Welcome back! In [Chapter 7: Client](07_client.md), we learned how Eliza connects to different platforms like websites and chat apps, allowing users to interact with her.
+
+But what happens when Eliza needs to *remember* things? What if she needs to store information about your conversations, your preferences, or even her own goals? That's where the **DatabaseAdapter** comes in!
+
+Think of the `DatabaseAdapter` as Eliza's long-term memory. It's like a filing cabinet where she can store and retrieve information, even after she's been restarted.
+
+**Central Use Case: Remembering Your Favorite Color**
+
+Let's say you tell Eliza, "My favorite color is blue." Without a `DatabaseAdapter`, Eliza would forget this information as soon as the conversation ends. But with a `DatabaseAdapter`, Eliza can store your favorite color in a database, and remember it the next time you chat with her!
+
+## Key Concepts of the `DatabaseAdapter`
+
+The `DatabaseAdapter` is like a central hub for all of Eliza's data interactions. It does the heavy lifting of storing and retrieving information from a database, so the rest of `eliza` doesn't need to worry about the details.
+
+Here's a breakdown of the key concepts:
+
+1.  **Abstraction:** The `DatabaseAdapter` *abstracts away* the underlying database implementation. This means you can use different types of databases (like SQLite, Postgres, or even a cloud-based database) without changing the rest of `eliza`'s code. Think of it like using a universal remote for your TV – you don't need to know the specific brand of TV to use the remote.
+
+2.  **Data Access Layer:** The `DatabaseAdapter` acts as a *data access layer*. It's the only part of `eliza` that directly interacts with the database. This makes it easier to manage and maintain the database, and it also improves security by preventing unauthorized access to the data.
+
+3.  **Interfaces:** The `DatabaseAdapter` *defines* a set of *interfaces* (think of them as contracts) that all database adapters must implement. These interfaces specify the methods that are used to store and retrieve data, like `getMemories()`, `createMemory()`, and `getAccountById()`.
+
+Let's imagine how this relates to our "favorite color" example:
+
+*   **Abstraction:** You could switch from using a local SQLite database to a cloud-based Postgres database without changing the code that tells Eliza to remember your favorite color. The `DatabaseAdapter` handles the details of interacting with each database.
+*   **Data Access Layer:** Only the `DatabaseAdapter` knows how to store and retrieve your favorite color from the database.
+*   **Interfaces:** The `DatabaseAdapter` implements interfaces like `createMemory()` (to store your favorite color) and `getMemories()` (to retrieve it later).
+
+## Using the `DatabaseAdapter`
+
+You don't directly interact with the `DatabaseAdapter` in your day-to-day usage of `eliza`. The `AgentRuntime` (which we learned about in [Chapter 4: AgentRuntime](04_agentruntime.md)) handles the interactions with the database through the `DatabaseAdapter`.
+
+However, if you want to create your own custom database adapter, or if you want to understand how `eliza` stores and retrieves information, it's helpful to understand how the `DatabaseAdapter` works.
+
+Here's a simplified example of how the `AgentRuntime` might use the `DatabaseAdapter` to store your favorite color:
+
+```typescript
+import { type IAgentRuntime, type Memory, type Content } from "@elizaos/core";
+
+async function rememberFavoriteColor(runtime: IAgentRuntime, userId: string, roomId:string, color: string) {
+    const content: Content = {
+        text: `User's favorite color is ${color}`,
+        source: "memory",
+    };
+
+    const memory: Memory = {
+        userId: userId,
+        agentId: runtime.agentId,
+        content: content,
+        roomId: roomId,
+    };
+
+    await runtime.databaseAdapter.createMemory(memory, "user_preferences");
+    console.log("Favorite color saved to database!");
+}
+```
+
+**Explanation:**
+
+1.  We create a `Content` object containing the information about your favorite color.
+2.  We create a `Memory` object that links the content to your user ID and the current room ID.
+3.  We call the `createMemory()` method on the `databaseAdapter` of the `AgentRuntime`, passing in the `Memory` object and a table name ("user_preferences").
+
+To retrieve your favorite color later, the `AgentRuntime` might use the `getMemories()` method:
+
+```typescript
+import { type IAgentRuntime } from "@elizaos/core";
+
+async function getFavoriteColor(runtime: IAgentRuntime, userId: string, roomId: string) {
+    const memories = await runtime.databaseAdapter.getMemories({
+        agentId: runtime.agentId,
+        roomId: roomId,
+        tableName: "user_preferences",
+    });
+
+    if (memories.length > 0) {
+        const favoriteColor = memories[0].content.text.split("is ")[1];
+        console.log(`User's favorite color is: ${favoriteColor}`);
+        return favoriteColor;
+    } else {
+        console.log("Favorite color not found.");
+        return null;
+    }
+}
+```
+
+**Explanation:**
+
+1.  We call the `getMemories()` method on the `databaseAdapter` of the `AgentRuntime`, passing in the user ID, room ID, and table name.
+2.  We check if any memories were found.
+3.  If memories were found, we extract the favorite color from the content of the first memory.
+
+**Example Input and Expected Output:**
+
+Let's imagine Eliza receives the message, "My favorite color is blue."
+
+**Input:**
+`"My favorite color is blue."`
+
+The `rememberFavoriteColor()` function would be called, and the following would happen:
+
+**Expected Output:**
+
+1.  The message "Favorite color saved to database!" would be logged to the console.
+2.  A new row would be added to the "user_preferences" table in the database, containing the information about your favorite color.
+
+Later, if you ask Eliza, "What's my favorite color?", the `getFavoriteColor()` function would be called, and the following would happen:
+
+**Expected Output:**
+
+1.  The message "User's favorite color is: blue" would be logged to the console.
+2.  The function would return the string "blue".
+
+## Internal Implementation
+
+Let's take a peek under the hood to see how the `DatabaseAdapter` is implemented within `eliza`.
+
+**Simplified Sequence Diagram:**
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Client
+    participant AgentRuntime
+    participant DatabaseAdapter
+    participant Database (e.g., SQLite)
+
+    User->>Client: Sends message: "My favorite color is blue."
+    Client->>AgentRuntime: Receives message
+    AgentRuntime->>AgentRuntime: Processes message and calls rememberFavoriteColor function
+    AgentRuntime->>DatabaseAdapter: Calls DatabaseAdapter.createMemory(memory, "user_preferences")
+    DatabaseAdapter->>Database: Sends SQL query to create a new row in the "user_preferences" table
+    Database-->>DatabaseAdapter: Returns success
+    DatabaseAdapter-->>AgentRuntime: Returns success
+    AgentRuntime->>Client: (Optional) Sends confirmation message to client
+    Client->>User: (Optional) Displays confirmation message
+```
+
+**Explanation:**
+
+1.  A user sends a message through a client.
+2.  The client passes the message to the `AgentRuntime`.
+3.  The `AgentRuntime` processes the message and determines that it needs to store the user's favorite color in the database.
+4.  The `AgentRuntime` calls the `createMemory()` method on the `DatabaseAdapter`, passing in the memory object and the table name ("user_preferences").
+5.  The `DatabaseAdapter` translates the request into a SQL query and sends it to the database (e.g., SQLite).
+6.  The database executes the query and creates a new row in the "user_preferences" table.
+7.  The database returns success to the `DatabaseAdapter`.
+8.  The `DatabaseAdapter` returns success to the `AgentRuntime`.
+9.  The `AgentRuntime` (optionally) sends a confirmation message back to the client, which displays it to the user.
+
+**Code Snippets:**
+
+The `DatabaseAdapter` abstract class is defined in `packages/core/src/database.ts`.
+
+```typescript
+export abstract class DatabaseAdapter<DB = any> implements IDatabaseAdapter {
+    // ... properties ...
+
+    /**
+     * Creates a new memory in the database.
+     * @param memory The memory object to create.
+     * @param tableName The table where the memory should be stored.
+     * @param unique Indicates if the memory should be unique.
+     * @returns A Promise that resolves when the memory has been created.
+     */
+    abstract createMemory(
+        memory: Memory,
+        tableName: string,
+        unique?: boolean
+    ): Promise<void>;
+
+    /**
+     * Retrieves memories based on the specified parameters.
+     * @param params An object containing parameters for the memory retrieval.
+     * @returns A Promise that resolves to an array of Memory objects.
+     */
+    abstract getMemories(params: {
+        agentId: UUID;
+        roomId: UUID;
+        count?: number;
+        unique?: boolean;
+        tableName: string;
+    }): Promise<Memory[]>;
+
+    // ... other abstract methods ...
+}
+```
+
+This code defines the abstract class `DatabaseAdapter` and specifies the `createMemory()` and `getMemories()` methods that all concrete implementations must implement.
+
+An example implementation of a database adapter could look like this. Note: this code is conceptual and it'd require the proper SQLite driver.
+
+```typescript
+import { DatabaseAdapter, IDatabaseAdapter, Memory, UUID } from "@elizaos/core";
+// import * as sqlite from "sqlite"; // Assuming the existence of an imports for SQLite
+
+class SQLiteDatabaseAdapter extends DatabaseAdapter {
+    db: any;
+
+    async init() {
+        // this.db = await sqlite.open({ filename: './mydb.db', driver: sqlite3.Database }); // Opens the SQLite database. `filename` can be changed
+        // await this.db.exec('CREATE TABLE IF NOT EXISTS user_preferences (id TEXT PRIMARY KEY, userId TEXT, data TEXT)'); // Creates an empty table if it doesn't exist"
+    }
+
+    async close() {
+        // await this.db.close();
+    }
+
+    async createMemory(memory: Memory, tableName: string, unique?: boolean): Promise<void> {
+        // await this.db.run('INSERT INTO user_preferences (id, userId, data) VALUES (?, ?, ?)', [memory.id, memory.userId, JSON.stringify(memory.content)]);
+    }
+
+    async getMemories(params: { agentId: UUID; roomId: UUID; count?: number | undefined; unique?: boolean | undefined; tableName: string; }): Promise<Memory[]> {
+        // Placeholder implementation
+        return [];
+    }
+}
+```
+
+This code shows a SQLite implementation of the `DatabaseAdapter`, including the `init`, `close`, `createMemory`, and `getMemories`. Note that functionality is commented out, because requires adding the relevant imports and the proper folder structure. This code is intended to show an example functionality.
+
+## Conclusion
+
+The `DatabaseAdapter` is essential for allowing `Eliza`'s to remember information and give each user its own tailored personality! By knowing how to connect `Eliza` to many different databases, each with their own strengths and weaknesses, you can extend the capabilities to create unique agents!
+
+Congratulations, you've reached the end of the core abstraction tutorials! You now have a solid understanding of the fundamental building blocks of `eliza`. By combining these abstractions, you can create powerful and versatile AI agents that are capable of interacting with the world in meaningful ways. You now know the full stack, and can start developing on top of Eliza. Let's continue to build on `eliza`!
+
+
+---
+
+Generated by [AI Codebase Knowledge Builder](https://github.com/The-Pocket/Tutorial-Codebase-Knowledge)

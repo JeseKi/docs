@@ -41,6 +41,20 @@
               "mintlify-starter/05_snippets__reusable_mdx_components_",
               "mintlify-starter/06_openapi_specification__openapi_json_"
             ]
+          },
+          {
+            "group": "Eliza",
+            "pages": [
+              "eliza/introduction",
+              "eliza/01_character",
+              "eliza/02_plugin",
+              "eliza/03_action",
+              "eliza/04_agentruntime",
+              "eliza/05_content",
+              "eliza/06_modelprovidername",
+              "eliza/07_client",
+              "eliza/08_databaseadapter"
+            ]
           }
         ]
       }
