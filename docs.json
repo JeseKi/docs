@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Tutorial Codebase Knowledge",
   "colors": {
     "primary": "#16A34A",
     "light": "#07C983",
@@ -20,7 +20,7 @@
             ]
           },
           {
-            "group": "Chapters",
+            "group": "Tutorial Codebase Knowledge",
             "pages": [
               "Tutorial-Codebase-Knowledge/01_flow",
               "Tutorial-Codebase-Knowledge/02_configuration_and_defaults",
@@ -28,6 +28,18 @@
               "Tutorial-Codebase-Knowledge/04_node",
               "Tutorial-Codebase-Knowledge/05_llm__language_model_",
               "Tutorial-Codebase-Knowledge/06_shared_dictionary"
+            ]
+          },
+          {
+            "group": "Mintlify Starter",
+            "pages": [
+              "mintlify-starter/introduction",
+              "mintlify-starter/01_documentation_pages__mdx_files_",
+              "mintlify-starter/02_navigation_configuration",
+              "mintlify-starter/03_docs_json__configuration_file_",
+              "mintlify-starter/04_mintlify_cli",
+              "mintlify-starter/05_snippets__reusable_mdx_components_",
+              "mintlify-starter/06_openapi_specification__openapi_json_"
             ]
           }
         ]
